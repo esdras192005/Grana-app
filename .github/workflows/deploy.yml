@@ -1,0 +1,54 @@
+name: Deploy Grana to GitHub Pages
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Extrair grana-app.zip (se existir) e preparar pasta de publicação
+        run: |
+          mkdir -p _publish
+          if [ -f "grana-app.zip" ]; then
+            mkdir -p _site_tmp
+            unzip -o grana-app.zip -d _site_tmp
+            if [ -d "_site_tmp/grana" ]; then
+              cp -r _site_tmp/grana/. _publish/
+            else
+              cp -r _site_tmp/. _publish/
+            fi
+          else
+            cp -r . _publish/ 2>/dev/null || true
+            rm -rf _publish/_publish
+          fi
+        shell: bash
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '_publish'
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
